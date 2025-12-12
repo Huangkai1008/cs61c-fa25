@@ -198,3 +198,4 @@ core.*
 *.bin
 *.mem
 
+.sdkmanrc
