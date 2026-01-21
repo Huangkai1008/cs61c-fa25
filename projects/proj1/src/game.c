@@ -7,6 +7,43 @@
 
 #include "snake_utils.h"
 
+/** Basic elements */
+#define WALL_CHAR '#'    ///< Character representing a wall
+#define EMPTY_CHAR ' '   ///< Character representing an empty cell
+#define FRUIT_CHAR '*'    ///< Character representing fruit
+
+/** Snake tail characters (direction indicators) */
+#define TAIL_UP 'w'      ///< Snake tail heading up
+#define TAIL_LEFT 'a'    ///< Snake tail heading left
+#define TAIL_DOWN 's'    ///< Snake tail heading down
+#define TAIL_RIGHT 'd'   ///< Snake tail heading right
+
+/** Snake body characters (direction indicators) */
+#define BODY_UP '^'      ///< Snake body heading up
+#define BODY_LEFT '<'    ///< Snake body heading left
+#define BODY_DOWN 'v'    ///< Snake body heading down
+#define BODY_RIGHT '>'   ///< Snake body heading right
+
+/** Snake head characters (direction indicators) */
+#define HEAD_UP 'W'      ///< Snake head heading up
+#define HEAD_LEFT 'A'    ///< Snake head heading left
+#define HEAD_DOWN 'S'    ///< Snake head heading down
+#define HEAD_RIGHT 'D'   ///< Snake head heading right
+
+/** Dead snake */
+#define DEAD_SNAKE 'x'   ///< Snake head that has died
+
+/**
+ * @brief Direction enumeration for snake movement.
+ */
+typedef enum {
+    DIR_NORTH = 0,  ///< Moving up
+    DIR_SOUTH = 1,  ///< Moving down
+    DIR_EAST = 2,   ///< Moving right
+    DIR_WEST = 3    ///< Moving left
+  } direction_t;
+
+
 /* Helper function definitions */
 static void set_board_at(game_t *game, unsigned int row, unsigned int col, char ch);
 static bool is_tail(char c);
@@ -21,10 +58,111 @@ static char next_square(game_t *game, unsigned int snum);
 static void update_tail(game_t *game, unsigned int snum);
 static void update_head(game_t *game, unsigned int snum);
 
+/**
+ * @brief Create board with given rows and columns.
+ *
+ * @param game The game structure.
+ * @param rows The number of rows in the board.
+ * @param cols The number of columns in the board.
+ */
+static void create_board(
+    game_t *game,
+    const unsigned int rows,
+    const unsigned int cols
+    ) {
+    game->board = calloc(rows, sizeof(char*));
+    if (!game->board) {
+        fprintf(stderr, "Error: Failed to allocate board\n");
+        free_game(game);
+        exit(EXIT_FAILURE);
+    }
+
+    // Each row is a string, add '\n' and '\0' in end.
+    for (int i = 0; i < rows; i++) {
+        game->board[i] = calloc(cols + 2, sizeof(char));
+        if (!game->board[i]) {
+            fprintf(stderr, "Error: Failed to allocate board row\n");
+            free_game(game);
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            if (i == 0 || i == rows - 1 || j == 0 || j == cols - 1) {
+                game->board[i][j] = WALL_CHAR;
+            } else {
+                game->board[i][j] = EMPTY_CHAR;
+            }
+        }
+
+        game->board[i][cols] = '\n';
+        game->board[i][cols + 1] = '\0';
+    }
+
+    game->num_rows = rows;
+}
+
+/**
+ * @brief Create default fruit.
+ *
+ * The fruit is at row 2, column 9 (zero-indexed).
+ */
+static void create_default_fruit(const game_t *game) {
+    const unsigned int row = 2;
+    const unsigned int col = 9;
+
+    game->board[row][col] = FRUIT_CHAR;
+}
+
+/**
+ * @brief Create default snake.
+ *
+ * The tail is at row 2, column 2, and the head is at row 2, column 4.
+ */
+static void create_default_snake(game_t *game) {
+    game->snakes = calloc(1, sizeof(snake_t));
+    if (!game->snakes) {
+        fprintf(stderr, "Error: Failed to allocate snake");
+        free_game(game);
+        exit(EXIT_FAILURE);
+    }
+
+    const unsigned int tail_row = 2;
+    const unsigned int tail_col = 2;
+    const unsigned int head_row = 2;
+    const unsigned int head_col = 4;
+    game->snakes[0] = (snake_t){
+        .tail_row = tail_row,
+        .tail_col = tail_col,
+        .head_row = head_row,
+        .head_col = head_col,
+        .live = true
+    };
+
+    game->num_snakes = 1;
+
+    // put snake on board
+    game->board[tail_row][tail_col] = TAIL_RIGHT;
+    game->board[tail_row][tail_col + 1] = BODY_RIGHT;
+    game->board[head_row][head_col] = HEAD_RIGHT;
+}
+
 /* Task 1 */
 game_t *create_default_game() {
-  // TODO: Implement this function.
-  return NULL;
+    game_t *game = calloc(1, sizeof(game_t));
+    if (!game) {
+        fprintf(stderr, "Error: Failed to allocate game structure");
+        exit(EXIT_FAILURE);
+    }
+
+    // The board has 18 rows, and each row has 20 columns.
+    const unsigned int default_board_rows = 18;
+    const unsigned int default_board_cols = 20;
+    create_board(game, default_board_rows, default_board_cols);
+    create_default_fruit(game);
+    create_default_snake(game);
+    return game;
 }
 
 /* Task 2 */
