@@ -159,6 +159,7 @@ game_t *create_default_game() {
     // The board has 18 rows, and each row has 20 columns.
     const unsigned int default_board_rows = 18;
     const unsigned int default_board_cols = 20;
+
     create_board(game, default_board_rows, default_board_cols);
     create_default_fruit(game);
     create_default_snake(game);
@@ -167,8 +168,19 @@ game_t *create_default_game() {
 
 /* Task 2 */
 void free_game(game_t *game) {
-  // TODO: Implement this function.
-  return;
+    if (!game) {
+        return;
+    }
+
+    if (game->board) {
+        for (unsigned int i = 0; i < game->num_rows; i++) {
+            free(game->board[i]);
+        }
+        free(game->board);
+    }
+
+    free(game->snakes);
+    free(game);
 }
 
 /* Task 3 */
