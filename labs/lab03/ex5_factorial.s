@@ -26,8 +26,19 @@ main:
 # a0 contains the number which we want to compute the factorial of
 # The return value should be stored in a0
 factorial:
-    # YOUR CODE HERE
+    # t0 = result = 1, t1 = n, t2 = 1
+    mv t1, a0
+    li t0, 1    
+    li t2, 1   
+    ble t1, t2, done    # if (n <= 1) goto done
 
+loop:
+    mul t0, t0, t1      # result *= n
+    addi t1, t1, -1     # n--  
+    bgt t1, t2, loop    # if (n > 1) continue
+
+done:
+    mv a0, t0
     # This is how you return from a function. You'll learn more about this later.
     # This should be the last line in your program.
     jr ra
