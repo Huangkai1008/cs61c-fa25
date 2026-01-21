@@ -184,9 +184,11 @@ void free_game(game_t *game) {
 }
 
 /* Task 3 */
+// ReSharper disable once CppParameterMayBeConstPtrOrRef
 void print_board(game_t *game, FILE *fp) {
-  // TODO: Implement this function.
-  return;
+  for (int i = 0; i < game->num_rows; ++i) {
+      fprintf(fp, "%s", game->board[i]);
+  }
 }
 
 /*
