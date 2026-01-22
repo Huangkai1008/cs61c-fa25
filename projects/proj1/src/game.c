@@ -245,14 +245,17 @@ static bool is_head(char c)
 }
 
 /*
+  Returns true if c is part of the snake's body.
+  The snake consists of these characters: "^<v>"
+  Returns false otherwise.
+*/
+static bool is_body(const char c) { return c == BODY_LEFT || c == BODY_RIGHT || c == BODY_UP || c == BODY_DOWN; }
+
+/*
   Returns true if c is part of the snake.
   The snake consists of these characters: "wasd^<v>WASDx"
 */
-static bool is_snake(char c)
-{
-    // TODO: Implement this function.
-    return true;
-}
+static bool is_snake(char c) { return is_head(c) || is_tail(c) || is_body(c); }
 
 /*
   Converts a character in the snake's body ("^<v>")
@@ -261,8 +264,19 @@ static bool is_snake(char c)
 */
 static char body_to_tail(char c)
 {
-    // TODO: Implement this function.
-    return '?';
+    switch (c)
+    {
+    case BODY_LEFT:
+        return TAIL_LEFT;
+    case BODY_RIGHT:
+        return TAIL_RIGHT;
+    case BODY_UP:
+        return TAIL_UP;
+    case BODY_DOWN:
+        return TAIL_DOWN;
+    default:
+        return c;
+    }
 }
 
 /*
@@ -272,8 +286,19 @@ static char body_to_tail(char c)
 */
 static char head_to_body(char c)
 {
-    // TODO: Implement this function.
-    return '?';
+    switch (c)
+    {
+    case HEAD_LEFT:
+        return BODY_LEFT;
+    case HEAD_RIGHT:
+        return BODY_RIGHT;
+    case HEAD_UP:
+        return BODY_UP;
+    case HEAD_DOWN:
+        return BODY_DOWN;
+    default:
+        return c;
+    }
 }
 
 /*
@@ -283,7 +308,16 @@ static char head_to_body(char c)
 */
 static unsigned int get_next_row(unsigned int cur_row, char c)
 {
-    // TODO: Implement this function.
+    if (c == BODY_DOWN || c == HEAD_DOWN || c == TAIL_DOWN)
+    {
+        return cur_row + 1;
+    }
+
+    if (c == BODY_UP || c == HEAD_UP || c == TAIL_UP)
+    {
+        return cur_row - 1;
+    }
+
     return cur_row;
 }
 
@@ -294,7 +328,16 @@ static unsigned int get_next_row(unsigned int cur_row, char c)
 */
 static unsigned int get_next_col(unsigned int cur_col, char c)
 {
-    // TODO: Implement this function.
+    if (c == BODY_RIGHT || c == HEAD_RIGHT || c == TAIL_RIGHT)
+    {
+        return cur_col + 1;
+    }
+
+    if (c == BODY_LEFT || c == HEAD_LEFT || c == TAIL_LEFT)
+    {
+        return cur_col - 1;
+    }
+
     return cur_col;
 }
 
@@ -306,10 +349,14 @@ static unsigned int get_next_col(unsigned int cur_col, char c)
 
   This function should not modify anything.
 */
+// ReSharper disable once CppParameterMayBeConst
 static char next_square(game_t *game, unsigned int snum)
 {
-    // TODO: Implement this function.
-    return '?';
+    const snake_t *snake = &game->snakes[snum];
+    const char head = get_board_at(game, snake->head_row, snake->head_col);
+    const unsigned int next_row = get_next_row(snake->head_row, head);
+    const unsigned int next_col = get_next_col(snake->head_col, head);
+    return get_board_at(game, next_row, next_col);
 }
 
 /*
@@ -319,15 +366,25 @@ static char next_square(game_t *game, unsigned int snum)
 
   ...on the board: add a character where the snake is moving
 
-  ...in the snake struct: update the row and col of the head
+  ...in the snake struct: update the row and col of the head.
 
   Note that this function ignores food, walls, and snake bodies when moving the
   head.
 */
 static void update_head(game_t *game, unsigned int snum)
 {
-    // TODO: Implement this function.
-    return;
+    // On the game board, add a new head where the snake is moving into,
+    // and change the old head from a head character (WASD) into a body character (^).
+    snake_t *snake = &game->snakes[snum];
+    const char head = get_board_at(game, snake->head_row, snake->head_col);
+    const unsigned int next_row = get_next_row(snake->head_row, head);
+    const unsigned int next_col = get_next_col(snake->head_col, head);
+    set_board_at(game, next_row, next_col, head);
+    set_board_at(game, snake->head_row, snake->head_col, head_to_body(head));
+
+    // In the snake, update the row and column of the head.
+    snake->head_row = next_row;
+    snake->head_col = next_col;
 }
 
 /*
@@ -342,15 +399,69 @@ static void update_head(game_t *game, unsigned int snum)
 */
 static void update_tail(game_t *game, unsigned int snum)
 {
-    // TODO: Implement this function.
-    return;
+    // On the game board, blank out the current tail,
+    // and change the new tail from a body character (^<v>) into a tail character (wasd).
+    snake_t *snake = &game->snakes[snum];
+    const char tail = get_board_at(game, snake->tail_row, snake->tail_col);
+    const unsigned int next_row = get_next_row(snake->tail_row, tail);
+    const unsigned int next_col = get_next_col(snake->tail_col, tail);
+    const char body = get_board_at(game, next_row, next_col);
+    set_board_at(game, snake->tail_row, snake->tail_col, EMPTY_CHAR);
+    set_board_at(game, next_row, next_col, body_to_tail(body));
+
+    // In the snake, update the row and column of the head.
+    snake->tail_row = next_row;
+    snake->tail_col = next_col;
+}
+
+static void update_snake_when_dead(game_t *game, const unsigned int snum)
+{
+    // When a snake dies, the head is replaced with an x.
+    snake_t *snake = &game->snakes[snum];
+    set_board_at(game, snake->head_row, snake->head_col, DEAD_SNAKE);
+    snake->live = false;
+}
+
+static void update_snake_when_eat_fruit(game_t *game, const unsigned int snum)
+{
+    // If the head moves into a fruit,
+    // the snake eats the fruit and grows by 1 unit in length.
+    update_head(game, snum);
+}
+
+static void update_snake(game_t *game, const unsigned int snum)
+{
+    update_head(game, snum);
+    update_tail(game, snum);
 }
 
 /* Task 4.5 */
 void update_game(game_t *game, int (*add_food)(game_t *game))
 {
-    // TODO: Implement this function.
-    return;
+    for (unsigned int snum = 0; snum < game->num_snakes; snum++)
+    {
+        const char square = next_square(game, snum);
+        // If the head crashes into the body of a snake or a wall,
+        // the snake dies and stops moving.
+        if (is_snake(square) || square == WALL_CHAR)
+        {
+            update_snake_when_dead(game, snum);
+        }
+
+        // If the head moves into a fruit,
+        // the snake eats the fruit and grows by 1 unit in length.
+        // Each time fruit is consumed, a new fruit is generated on the board.
+        else if (square == FRUIT_CHAR)
+        {
+            update_snake_when_eat_fruit(game, snum);
+            add_food(game);
+        }
+
+        else
+        {
+            update_snake(game, snum);
+        }
+    }
 }
 
 /* Task 5.1 */
