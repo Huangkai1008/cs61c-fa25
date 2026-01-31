@@ -44,6 +44,9 @@ typedef enum
     DIR_WEST = 3   ///< Moving left
 } direction_t;
 
+#define INITIAL_BUFFER_SIZE 128
+#define GROWTH_FACTOR 2
+
 /* Helper function definitions */
 static void set_board_at(game_t *game, unsigned int row, unsigned int col, char ch);
 static bool is_tail(char c);
@@ -467,7 +470,42 @@ void update_game(game_t *game, int (*add_food)(game_t *game))
 /* Task 5.1 */
 char *read_line(FILE *fp)
 {
-    // TODO: Implement this function.
+    // If the end of the file is reached, return NULL.
+    if (feof(fp))
+    {
+        return NULL;
+    }
+
+    // Allocate memory for the line.
+    char *line = calloc(INITIAL_BUFFER_SIZE, sizeof(char));
+    if (!line)
+    {
+        return NULL;
+    }
+
+    // Read the line from the file.
+    size_t line_capacity = INITIAL_BUFFER_SIZE;
+    while (fgets(line, (int) line_capacity, fp))
+    {   
+        // If the line contains a newline character, return the line.
+        if (strchr(line, '\n'))
+        {
+            return line;
+        }
+
+        // If the line does not contain a newline character, increase the capacity of the line.
+        line_capacity *= GROWTH_FACTOR;
+        char *newline = realloc(line, line_capacity);
+        if (!line)
+        {
+            free(line);
+            return NULL;
+        }
+
+        free(line);
+        line = newline;
+    }
+    free(line);
     return NULL;
 }
 
