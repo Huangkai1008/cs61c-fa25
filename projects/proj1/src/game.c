@@ -486,7 +486,7 @@ char *read_line(FILE *fp)
     // Read the line from the file.
     size_t line_capacity = INITIAL_BUFFER_SIZE;
     while (fgets(line, (int) line_capacity, fp))
-    {   
+    {
         // If the line contains a newline character, return the line.
         if (strchr(line, '\n'))
         {
@@ -512,8 +512,44 @@ char *read_line(FILE *fp)
 /* Task 5.2 */
 game_t *load_board(FILE *fp)
 {
-    // TODO: Implement this function.
-    return NULL;
+    game_t *game = calloc(1, sizeof(game_t));
+    if (!game)
+    {
+        fprintf(stderr, "Error: Failed to allocate game structure");
+        return NULL;
+    }
+
+    game->num_rows = 0;
+    game->board = NULL;
+    game->num_snakes = 0;
+    game->snakes = NULL;
+
+    for (char *line = read_line(fp); line; line = read_line(fp)) {
+        char *row = malloc((strlen(line) + 1) * sizeof(char));
+        if (!row)
+        {
+            free(row);
+            free(line);
+            free_game(game);
+            return NULL;
+        }
+
+        strcpy(row, line);
+
+        char **new_board = realloc(game->board, (game->num_rows + 1) * sizeof(char *));
+        if (!new_board)
+        {
+            free(row);
+            free(line);
+            free_game(game);
+            return NULL;
+        }
+
+        game->board = new_board;
+        game->board[game->num_rows++] = row;
+        free(line);
+    }
+    return game;
 }
 
 /*
