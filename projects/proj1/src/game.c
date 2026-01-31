@@ -191,7 +191,10 @@ void free_game(game_t *game)
         free(game->board);
     }
 
-    free(game->snakes);
+    if (game->snakes)
+    {
+        free(game->snakes);
+    }
     free(game);
 }
 
@@ -470,12 +473,6 @@ void update_game(game_t *game, int (*add_food)(game_t *game))
 /* Task 5.1 */
 char *read_line(FILE *fp)
 {
-    // If the end of the file is reached, return NULL.
-    if (feof(fp))
-    {
-        return NULL;
-    }
-
     // Allocate memory for the line.
     char *line = calloc(INITIAL_BUFFER_SIZE, sizeof(char));
     if (!line)
@@ -485,10 +482,14 @@ char *read_line(FILE *fp)
 
     // Read the line from the file.
     size_t line_capacity = INITIAL_BUFFER_SIZE;
-    while (fgets(line, (int) line_capacity, fp))
+    size_t cur_pos = 0;
+
+    while (fgets(line + cur_pos, (int) (line_capacity - cur_pos), fp))
     {
+        cur_pos = strlen(line);
+
         // If the line contains a newline character, return the line.
-        if (strchr(line, '\n'))
+        if (cur_pos > 0 && line[cur_pos - 1] == '\n')
         {
             return line;
         }
@@ -496,13 +497,12 @@ char *read_line(FILE *fp)
         // If the line does not contain a newline character, increase the capacity of the line.
         line_capacity *= GROWTH_FACTOR;
         char *newline = realloc(line, line_capacity);
-        if (!line)
+        if (!newline)
         {
             free(line);
             return NULL;
         }
 
-        free(line);
         line = newline;
     }
     free(line);
@@ -528,7 +528,6 @@ game_t *load_board(FILE *fp)
         char *row = malloc((strlen(line) + 1) * sizeof(char));
         if (!row)
         {
-            free(row);
             free(line);
             free_game(game);
             return NULL;
@@ -585,7 +584,7 @@ game_t *initialize_snakes(game_t *game)
     {
         for (unsigned int col = 0; col < strlen(game->board[row]); col++)
         {
-            char c = get_board_at(game, row, col);
+            const char c = get_board_at(game, row, col);
             if (is_tail(c))
             {
                 snake_t *original_snakes = snakes;
